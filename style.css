@@ -140,3 +140,21 @@
     margin-top: 10px;
     margin-bottom: 0;
 }
+
+
+
+@media (max-width: 540px) {
+    .row-controls {
+        width: min-content;
+        margin-left: 0;
+        margin-top: 0;
+        flex-direction: column;        
+        gap: 0.5rem;                  
+    }
+  
+    .row-controls button {
+        width: 100%;
+        font-size: x-small;
+        text-align: center;         
+    }
+}

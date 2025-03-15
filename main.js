@@ -104,9 +104,7 @@ function createGameRow(isActive = false) {
 											</div>
 											<div class="row-controls">
 													<button class="btn btn-primary btn-sm submit-guess">Submit Guess</button>
-													<button class="btn btn-secondary btn-sm run-solver">
-															<i class="fas fa-magic"></i> Run Solver
-													</button>
+													<button class="btn btn-secondary btn-sm run-solver"><i class="fas fa-magic"></i> Run Solver</button>
 											</div>
 									</div>
 									<div class="d-flex flex-wrap" style="width: 50px">
@@ -316,9 +314,6 @@ function initializeDragAndDrop() {
     colorPickers.forEach(picker => {
         picker.addEventListener('dragstart', handleDragStart);
         picker.addEventListener('dragend', handleDragEnd);
-        picker.addEventListener('touchstart', handleTouchStart);
-        picker.addEventListener('touchmove', handleTouchMove);
-        picker.addEventListener('touchend', handleTouchEnd);
     });
 
     gamePegs.forEach(peg => {
@@ -356,53 +351,6 @@ function handleDrop(e) {
     const color = e.dataTransfer.getData('text/plain');
     e.target.style.backgroundColor = color;
     e.target.classList.remove('droppable');
-}
-
-let currentTouchTarget = null;
-
-// Handle touchstart for mobile drag
-function handleTouchStart(e) {
-    currentTouchTarget = e.target;
-    currentTouchTarget.classList.add('dragging');
-    const rect = currentTouchTarget.getBoundingClientRect();
-    // Store the offset between touch point and element's top-left corner
-    currentTouchTarget.touchOffsetX = e.touches[0].clientX - rect.left;
-    currentTouchTarget.touchOffsetY = e.touches[0].clientY - rect.top;
-    e.preventDefault();
-}
-
-// Handle touchmove for mobile drag
-function handleTouchMove(e) {
-    if (!currentTouchTarget) return;
-    const touch = e.touches[0];
-    // Position the element under the finger
-    currentTouchTarget.style.position = 'fixed';
-    currentTouchTarget.style.zIndex = '1000';
-    currentTouchTarget.style.left = (touch.clientX - currentTouchTarget.touchOffsetX) + 'px';
-    currentTouchTarget.style.top = (touch.clientY - currentTouchTarget.touchOffsetY) + 'px';
-    e.preventDefault();
-}
-
-// Handle touchend to simulate a drop
-function handleTouchEnd(e) {
-    if (!currentTouchTarget) return;
-    const touch = e.changedTouches[0];
-    // Determine drop target using elementFromPoint
-    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    currentTouchTarget.classList.remove('dragging');
-    // Reset inline styles
-    currentTouchTarget.style.position = '';
-    currentTouchTarget.style.zIndex = '';
-    currentTouchTarget.style.left = '';
-    currentTouchTarget.style.top = '';
-    
-    // If dropped on a game peg, set its background color
-    if (dropTarget && dropTarget.classList.contains('game-peg')) {
-         dropTarget.style.backgroundColor = currentTouchTarget.style.backgroundColor;
-    }
-    
-    currentTouchTarget = null;
-    e.preventDefault();
 }
 
 startGameBtn.addEventListener('click', () => {
