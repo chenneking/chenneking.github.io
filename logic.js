@@ -1,14 +1,14 @@
-const code_length = 4;
+const codeLength = 4;
 
 // Function to generate all combinations (codes) of given length using numbers 0 to num_colors-1
-function generateCombinationsLogic(num_colors) {
+function generateCombinationsLogic(numColors) {
     let results = [];
     function helper(current) {
-        if (current.length === code_length) {
+        if (current.length === codeLength) {
             results.push(current.slice());
             return;
         }
-        for (let i = 0; i < num_colors; i++) {
+        for (let i = 0; i < numColors; i++) {
             current.push(i);
             helper(current);
             current.pop();
@@ -52,7 +52,7 @@ function computeFeedback(guess, candidate) {
 // step: current step (not used in this implementation but kept for consistency)
 function solve_logic(state, num_colors, step) {
     // Generate all possible candidate codes
-    const allCodes = generateCombinationsLogic(num_colors, code_length);
+    const allCodes = generateCombinationsLogic(num_colors);
     
     // Filter candidates based on the constraints from each played row in state
     let candidates = allCodes.filter(code => {
@@ -64,10 +64,10 @@ function solve_logic(state, num_colors, step) {
             let guess = row.slice(0, 4);
             // Determine expected feedback counts from the row's feedback part (positions 4-7)
             let exactCount = row.slice(4, 8).filter(val => val === 2).length;
-            let whiteCount = row.slice(4, 8).filter(val => val === 1).length;
+            let partialCount = row.slice(4, 8).filter(val => val === 1).length;
             
             let fb = computeFeedback(guess, code);
-            if (fb.exact !== exactCount || fb.white !== whiteCount) {
+            if (fb.exact !== exactCount || fb.partial !== partialCount) {
                 return false;
             }
         }
@@ -79,7 +79,34 @@ function solve_logic(state, num_colors, step) {
         return [];
     }
     
-    // If more than one candidate remains, simply return the first one.
-    // This logic can be extended to choose the candidate that maximizes information gain.
-    return candidates[0];
+    
+    if (candidates.length === 1) {
+        return candidates[0];
+    }
+
+    // Choose candidate that maximizes expected information gain using Shannon entropy
+    let bestCandidate = null;
+    let bestEntropy = -Infinity;
+    const totalCandidates = candidates.length;
+
+    for (let guess of candidates) {
+        let distribution = {};
+        // Simulate feedback for each possible secret in candidates
+        for (let secret of candidates) {
+            let fb = computeFeedback(guess, secret);
+            // Create a unique key based on feedback: "exact-white"
+            let key = fb.exact + '-' + fb.white;
+            distribution[key] = (distribution[key] || 0) + 1;
+        }
+        let entropy = 0;
+        for (let key in distribution) {
+            let p = distribution[key] / totalCandidates;
+            entropy -= p * Math.log2(p);
+        }
+        if (entropy > bestEntropy) {
+            bestEntropy = entropy;
+            bestCandidate = guess;
+        }
+    }
+    return bestCandidate;
 }
