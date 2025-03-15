@@ -2,6 +2,10 @@
 // Color indices start with 0. Feedback values are: 2 = right color, right location; 1 = right color; 0 = nothing.
 let state = [];
 let secretCode = [];
+let maxGuesses;
+let currentRow;
+let solverChoice;
+let solverFn;
 
 let colorMap = {
     0: '#ff0000',
@@ -42,8 +46,8 @@ const rgbToHex = (r, g, b) => {
 const rgbStringToHex = (s) => {
     let sliced = s.slice(4, -1)
     let vals = sliced.split(', ')
-    let int_vals = [parseInt(vals[0]), parseInt(vals[1]), parseInt(vals[2])]
-    return rgbToHex(int_vals[0], int_vals[1], int_vals[2])
+    let intVals = [parseInt(vals[0]), parseInt(vals[1]), parseInt(vals[2])]
+    return rgbToHex(intVals[0], intVals[1], intVals[2])
 }
 
 
@@ -216,9 +220,9 @@ function handleSubmitGuess() {
 
 function handleSolve() {
     // Call solver with current state to figure out best guess
-    let solver_guess = solver_fn(state, selected_color_count, max_guesses - 1 - currentRow);
+    let solverGuess = solverFn(state, selected_color_count, maxGuesses - 1 - currentRow);
 
-    let guessColors = solver_guess.map(id => colorMap[id]);
+    let guessColors = solverGuess.map(id => colorMap[id]);
 
     const currentActiveRow = document.querySelector('.active-row');
     const pegElements = Array.from(currentActiveRow.querySelectorAll('.game-peg'))
@@ -237,29 +241,29 @@ function evaluateGuess(guessColors) {
 
     // Save state
     for (let i = 0; i < 4; i++) {
-        state[max_guesses - 1 - currentRow][i] = inverseColorMap[guessColors[i]];
+        state[maxGuesses - 1 - currentRow][i] = inverseColorMap[guessColors[i]];
     }
 
     // Display feedback (black for exact matches, white for color matches)
     // Also save feedback to state
     let pegIndex = 0;
     for (let i = 0; i < feedback.exactMatches; i++) {
-        state[max_guesses - 1 - currentRow][4 + pegIndex] = 2;
+        state[maxGuesses - 1 - currentRow][4 + pegIndex] = 2;
         feedbackPegs[pegIndex++].style.backgroundColor = '#000';
     }
     for (let i = 0; i < feedback.colorMatches; i++) {
-        state[max_guesses - 1 - currentRow][4 + pegIndex] = 1;
+        state[maxGuesses - 1 - currentRow][4 + pegIndex] = 1;
         feedbackPegs[pegIndex++].style.backgroundColor = '#888';
     }
 
     // Fill remaining feedback slots in state with zeros
     for (let i = 4 + pegIndex; i < 8; i++) {
-        state[max_guesses - 1 - currentRow][i] = 0;
+        state[maxGuesses - 1 - currentRow][i] = 0;
     }
 
     // Check win condition
     if (feedback.exactMatches === 4) {
-        updateStatusMessage("You've Won!");
+        updateStatusMessage("You've won!");
         generateConfetti('🎉');
         return;
     }
@@ -267,7 +271,7 @@ function evaluateGuess(guessColors) {
     // Move to next row if not last guess
     if (currentRow > 0) {
         currentActiveRow.classList.remove('active-row');
-        const nextRow = gameBoard.children[--currentRow + 1]; // +1 for secret row
+        const nextRow = gameBoard.children[--currentRow + 1]; 
         nextRow.classList.add('active-row');
         initializeDragAndDrop();
     } else {
@@ -276,16 +280,16 @@ function evaluateGuess(guessColors) {
             secretPegs[index].textContent = '';
             secretPegs[index].style.backgroundColor = color;
         });
-        updateStatusMessage("You've Lost!");
+        updateStatusMessage("You've lost!");
         generateConfetti('❌');
     }
 }
 
 function initializeGame() {
     gameBoard.innerHTML = '';
-    currentRow = max_guesses - 1;
+    currentRow = maxGuesses - 1;
 
-    for (let i = 0; i < max_guesses; i++) {
+    for (let i = 0; i < maxGuesses; i++) {
         state.push([null, null, null, null, null, null, null, null]);
     }
 
@@ -298,8 +302,8 @@ function initializeGame() {
     gameBoard.appendChild(createSecretRow());
 
     // Create rows from bottom to top
-    for (let i = 0; i < max_guesses; i++) {
-        const row = createGameRow(i === max_guesses - 1);
+    for (let i = 0; i < maxGuesses; i++) {
+        const row = createGameRow(i === maxGuesses - 1);
         gameBoard.appendChild(row);
     }
 
@@ -358,11 +362,11 @@ startGameBtn.addEventListener('click', () => {
     gameBoard.style.display = 'block';
     colorPicker.style.display = 'block';
 
-    max_guesses = parseInt(document.getElementById('max-guesses').value);
-    currentRow = max_guesses - 1;
+    maxGuesses = parseInt(document.getElementById('max-guesses').value);
+    currentRow = maxGuesses - 1;
 
-    solver_choice = document.getElementById('logic-solver').checked ? 'logic' : 'knuth';
-    solver_fn = solver_choice == 'logic' ? solve_logic : solve_knuth;
+    solverChoice = document.getElementById('logic-solver').checked ? 'logic' : 'knuth';
+    solverFn = solverChoice == 'logic' ? solve_logic : solve_knuth;
 
     initializeGame();
 });
