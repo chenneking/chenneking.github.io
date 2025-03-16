@@ -33,6 +33,8 @@ const gameSetup = document.getElementById('game-setup');
 const colorPicker = document.getElementById('color-picker');
 const gameBoard = document.getElementById('game-board');
 const startGameBtn = document.getElementById('start-game-btn');
+const restartGameBtnSameSettings = document.getElementById('btn-restart-same');
+const restartGameBtnDifferentettings= document.getElementById('btn-new-settings')
 
 const componentToHex = (c) => {
     const hex = c.toString(16);
@@ -265,6 +267,9 @@ function evaluateGuess(guessColors) {
     if (feedback.exactMatches === 4) {
         updateStatusMessage("You've won!");
         generateConfetti('🎉');
+        setTimeout(() => {
+            $('#restart-modal').modal('show');
+        }, 8000);
         return;
     }
 
@@ -282,6 +287,9 @@ function evaluateGuess(guessColors) {
         });
         updateStatusMessage("You've lost!");
         generateConfetti('❌');
+        setTimeout(() => {
+            $('#restart-modal').modal('show');
+        }, 8000);
     }
 }
 
@@ -369,4 +377,19 @@ startGameBtn.addEventListener('click', () => {
     solverFn = solverChoice == 'logic' ? solve_logic : solve_knuth;
 
     initializeGame();
+});
+
+restartGameBtnSameSettings.addEventListener('click', function() {
+    $('#restart-modal').modal('hide');
+    state = [];
+    
+    if (solverChoice == 'knuth') {
+        resetKnuthSolver();
+    }
+    
+    initializeGame();
+});
+
+restartGameBtnDifferentettings.addEventListener('click', function() {
+    location.reload();
 });

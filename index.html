@@ -125,6 +125,28 @@
 			</div>
 		</div>
 	</div>
+
+
+	<!-- Restart Game Modal -->
+	<div class="modal fade" id="restart-modal" tabindex="-1" aria-labelledby="restartModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="restartModalLabel">Game Over</h5>
+					<button type="button" class="btn-close close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<p>How would you like to proceed? Restart the game with the same settings or choose different settings?</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" id="btn-restart-same">Restart (same settings)</button>
+					<button type="button" class="btn btn-secondary" id="btn-new-settings">Restart (new settings)</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
 	<script src="knuth.js"></script>
 	<script src="logic.js"></script>
 	<script src="main.js"></script>

@@ -1,5 +1,10 @@
 let combinations = null;
 
+function resetKnuthSolver() {
+    combinations = null;
+}
+
+
 // Returns a new Set containing elements that are in both A and B
 function setIntersection(A, B) {
     return new Set([...A].filter(x => B.has(x)));
