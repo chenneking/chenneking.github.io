@@ -4,8 +4,11 @@ let state = [];
 let secretCode = [];
 let maxGuesses;
 let currentRow;
-let solverChoice;
 let solverFn;
+let selectedColorCount;
+let allowDuplicates;
+let gameOver = false;
+let endGameTimers = [];
 
 let colorMap = {
     0: '#ff0000',
@@ -18,46 +21,19 @@ let colorMap = {
     7: '#8800ff'
 }
 
-let inverseColorMap = {
-    '#ff0000': 0,
-    '#00ff00': 1,
-    '#0000ff': 2,
-    '#ffff00': 3,
-    '#ff00ff': 4,
-    '#00ffff': 5,
-    '#ff8800': 6,
-    '#8800ff': 7
-}
-
 const gameSetup = document.getElementById('game-setup');
 const colorPicker = document.getElementById('color-picker');
 const gameBoard = document.getElementById('game-board');
 const startGameBtn = document.getElementById('start-game-btn');
 const restartGameBtnSameSettings = document.getElementById('btn-restart-same');
-const restartGameBtnDifferentettings= document.getElementById('btn-new-settings')
-
-const componentToHex = (c) => {
-    const hex = c.toString(16);
-    return hex.length == 1 ? "0" + hex : hex;
-}
-
-const rgbToHex = (r, g, b) => {
-    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
-}
-
-const rgbStringToHex = (s) => {
-    let sliced = s.slice(4, -1)
-    let vals = sliced.split(', ')
-    let intVals = [parseInt(vals[0]), parseInt(vals[1]), parseInt(vals[2])]
-    return rgbToHex(intVals[0], intVals[1], intVals[2])
-}
+const restartGameBtnDifferentSettings = document.getElementById('btn-new-settings');
 
 
 function filterColors() {
-    selected_color_count = parseInt(document.getElementById("color-count").value);
     const allPickers = document.querySelectorAll(".color-picker");
     allPickers.forEach((picker, index) => {
-        picker.style.display = index < selected_color_count ? "block" : "none";
+        picker.style.display = index < selectedColorCount ? "block" : "none";
+        picker.dataset.color = index;
     });
 }
 
@@ -79,20 +55,12 @@ function createSecretRow() {
 }
 
 function generateSecretCode() {
-    const allowDuplicates = document.getElementById("allow-duplicates").checked;
-    const colorCount = parseInt(document.getElementById("color-count").value);
-    const allColors = Array.from(document.querySelectorAll(".color-picker"))
-        .filter(picker => picker.style.display !== "none")
-        .map(picker => picker.style.backgroundColor)
-        .map(col => rgbStringToHex(col));
-
+    const colors = Array.from({ length: selectedColorCount }, (_, index) => index);
     secretCode = [];
-    while (secretCode.length < 4) {
-        const randomColor = allColors[Math.floor(Math.random() * colorCount)];
-        if (!allowDuplicates && secretCode.includes(randomColor)) {
-            continue;
-        }
-        secretCode.push(randomColor);
+    for (let i = 0; i < codeLength; i++) {
+        const index = Math.floor(Math.random() * colors.length);
+        secretCode.push(colors[index]);
+        if (!allowDuplicates) colors.splice(index, 1);
     }
 }
 
@@ -132,37 +100,8 @@ function createGameRow(isActive = false) {
 }
 
 function calculateFeedback(guess) {
-    const secretCopy = [...secretCode];
-    const guessCopy = [...guess];
-    let exactMatches = 0;
-    let colorMatches = 0;
-
-    // First pass: count exact matches
-    for (let i = 0; i < secretCopy.length; i++) {
-        if (guessCopy[i] === secretCopy[i]) {
-            exactMatches++;
-            secretCopy[i] = null;
-            guessCopy[i] = null;
-        }
-    }
-
-    // Second pass: count color matches
-    for (let i = 0; i < guessCopy.length; i++) {
-        if (guessCopy[i] === null) continue;
-
-        const colorIndex = secretCopy.indexOf(guessCopy[i]);
-        if (colorIndex !== -1) {
-            colorMatches++;
-            secretCopy[colorIndex] = null;
-        }
-    }
-
-    return { exactMatches, colorMatches };
-}
-
-function scoreGuess(guess) {
-    let feedback = calculateFeedback(guess)
-    return feedback.exactMatches * 2 + feedback.colorMatches;
+    const { exact, partial } = computeFeedback(guess, secretCode);
+    return { exactMatches: exact, colorMatches: partial };
 }
 
 
@@ -176,14 +115,15 @@ function generateConfetti(emoji_str) {
     const secretPegs = document.querySelectorAll('.secret-row .game-peg');
     secretCode.forEach((color, index) => {
         secretPegs[index].textContent = '';
-        secretPegs[index].style.backgroundColor = color;
+        secretPegs[index].style.backgroundColor = colorMap[color];
     });
 
     // Create party emoji explosion
     const confettiCount = 150;
     for (let i = 0; i < confettiCount; i++) {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             const emoji = document.createElement('div');
+            emoji.className = 'game-confetti';
             emoji.textContent = emoji_str;
             emoji.style.position = 'fixed';
             emoji.style.left = Math.random() * window.innerWidth + 'px';
@@ -198,21 +138,20 @@ function generateConfetti(emoji_str) {
             emoji.style.setProperty('--rotate-angle', `${rotationDirection}deg`);
 
             document.body.appendChild(emoji);
-            setTimeout(() => emoji.remove(), 3000);
+            endGameTimers.push(setTimeout(() => emoji.remove(), 3000));
         }, i * 50);
+        endGameTimers.push(timer);
     }
 }
 
 function handleSubmitGuess() {
     const currentActiveRow = document.querySelector('.active-row');
-    let guessColors = Array.from(currentActiveRow.querySelectorAll('.game-peg'))
-        .map(peg => peg.style.backgroundColor);
-
-    // RGB -> Hex conversion
-    guessColors = guessColors.map(color => rgbStringToHex(color));
+    if (!currentActiveRow || gameOver) return;
+    const guessColors = Array.from(currentActiveRow.querySelectorAll('.game-peg'))
+        .map(peg => peg.dataset.color === undefined ? null : Number(peg.dataset.color));
 
     // Validate all pegs are filled
-    if (guessColors.includes('#ffffff') || guessColors.includes('')) {
+    if (guessColors.some(color => color === null)) {
         alert('Please fill all pegs before submitting!');
         return;
     }
@@ -221,29 +160,33 @@ function handleSubmitGuess() {
 }
 
 function handleSolve() {
+    if (gameOver) return;
     // Call solver with current state to figure out best guess
-    let solverGuess = solverFn(state, selected_color_count, maxGuesses - 1 - currentRow);
-
-    let guessColors = solverGuess.map(id => colorMap[id]);
+    const solverGuess = solverFn(state, selectedColorCount, maxGuesses - 1 - currentRow, allowDuplicates);
+    if (!solverGuess) {
+        updateStatusMessage('No valid code matches the feedback.');
+        return;
+    }
 
     const currentActiveRow = document.querySelector('.active-row');
     const pegElements = Array.from(currentActiveRow.querySelectorAll('.game-peg'))
 
     for (let i = 0; i < pegElements.length; i++) {
-        pegElements[i].style.backgroundColor = guessColors[i];
+        pegElements[i].style.backgroundColor = colorMap[solverGuess[i]];
+        pegElements[i].dataset.color = solverGuess[i];
     }
 
-    evaluateGuess(guessColors);
+    evaluateGuess(solverGuess);
 }
 
-function evaluateGuess(guessColors) {
+function evaluateGuess(guess) {
     const currentActiveRow = document.querySelector('.active-row');
-    const feedback = calculateFeedback(guessColors);
+    const feedback = calculateFeedback(guess);
     const feedbackPegs = currentActiveRow.querySelectorAll('.feedback-peg');
 
     // Save state
     for (let i = 0; i < 4; i++) {
-        state[maxGuesses - 1 - currentRow][i] = inverseColorMap[guessColors[i]];
+        state[maxGuesses - 1 - currentRow][i] = guess[i];
     }
 
     // Display feedback (black for exact matches, white for color matches)
@@ -265,11 +208,13 @@ function evaluateGuess(guessColors) {
 
     // Check win condition
     if (feedback.exactMatches === 4) {
+        gameOver = true;
+        currentActiveRow.classList.remove('active-row');
         updateStatusMessage("You've won!");
         generateConfetti('🎉');
-        setTimeout(() => {
+        endGameTimers.push(setTimeout(() => {
             $('#restart-modal').modal('show');
-        }, 8000);
+        }, 8000));
         return;
     }
 
@@ -280,20 +225,22 @@ function evaluateGuess(guessColors) {
         nextRow.classList.add('active-row');
         initializeDragAndDrop();
     } else {
-        const secretPegs = document.querySelectorAll('.secret-row .game-peg');
-        secretCode.forEach((color, index) => {
-            secretPegs[index].textContent = '';
-            secretPegs[index].style.backgroundColor = color;
-        });
+        gameOver = true;
+        currentActiveRow.classList.remove('active-row');
         updateStatusMessage("You've lost!");
         generateConfetti('❌');
-        setTimeout(() => {
+        endGameTimers.push(setTimeout(() => {
             $('#restart-modal').modal('show');
-        }, 8000);
+        }, 8000));
     }
 }
 
 function initializeGame() {
+    endGameTimers.forEach(clearTimeout);
+    endGameTimers = [];
+    document.querySelectorAll('.game-confetti').forEach(emoji => emoji.remove());
+    gameOver = false;
+    state = [];
     gameBoard.innerHTML = '';
     currentRow = maxGuesses - 1;
 
@@ -319,14 +266,8 @@ function initializeGame() {
 }
 
 function initializeDragAndDrop() {
-    const colorPickers = document.querySelectorAll('.color-picker');
     const activeRow = document.querySelector('.active-row');
     const gamePegs = activeRow.querySelectorAll('.game-peg');
-
-    colorPickers.forEach(picker => {
-        picker.addEventListener('dragstart', handleDragStart);
-        picker.addEventListener('dragend', handleDragEnd);
-    });
 
     gamePegs.forEach(peg => {
         peg.addEventListener('dragenter', handleDragEnter);
@@ -337,8 +278,12 @@ function initializeDragAndDrop() {
 }
 
 function handleDragStart(e) {
+    if (gameOver || e.target.style.display === 'none') {
+        e.preventDefault();
+        return;
+    }
     e.target.classList.add('dragging');
-    e.dataTransfer.setData('text/plain', e.target.style.backgroundColor);
+    e.dataTransfer.setData('text/plain', e.target.dataset.color);
 }
 
 function handleDragEnd(e) {
@@ -360,36 +305,45 @@ function handleDragLeave(e) {
 
 function handleDrop(e) {
     e.preventDefault();
-    const color = e.dataTransfer.getData('text/plain');
-    e.target.style.backgroundColor = color;
+    const droppedColor = e.dataTransfer.getData('text/plain');
+    const color = Number(droppedColor);
+    if (gameOver || !e.target.closest('.active-row') || !Number.isInteger(color) ||
+        droppedColor === '' || color < 0 || color >= selectedColorCount) return;
+    e.target.style.backgroundColor = colorMap[color];
+    e.target.dataset.color = color;
     e.target.classList.remove('droppable');
 }
 
 startGameBtn.addEventListener('click', () => {
+    const colorCount = Number(document.getElementById('color-count').value);
+    const guessCount = Number(document.getElementById('max-guesses').value);
+    if (!Number.isInteger(colorCount) || colorCount < 4 || colorCount > 8 ||
+        !Number.isInteger(guessCount) || guessCount < 2 || guessCount > 10) {
+        alert('Choose 4–8 colors and 2–10 guesses.');
+        return;
+    }
+    selectedColorCount = colorCount;
+    maxGuesses = guessCount;
+    allowDuplicates = document.getElementById('allow-duplicates').checked;
     gameSetup.style.display = 'none';
     gameBoard.style.display = 'block';
     colorPicker.style.display = 'block';
 
-    maxGuesses = parseInt(document.getElementById('max-guesses').value);
-    currentRow = maxGuesses - 1;
-
-    solverChoice = document.getElementById('logic-solver').checked ? 'logic' : 'knuth';
-    solverFn = solverChoice == 'logic' ? solve_logic : solve_knuth;
+    solverFn = document.getElementById('logic-solver').checked ? solve_logic : solve_knuth;
 
     initializeGame();
+});
+
+document.querySelectorAll('.color-picker').forEach(picker => {
+    picker.addEventListener('dragstart', handleDragStart);
+    picker.addEventListener('dragend', handleDragEnd);
 });
 
 restartGameBtnSameSettings.addEventListener('click', function() {
     $('#restart-modal').modal('hide');
-    state = [];
-    
-    if (solverChoice == 'knuth') {
-        resetKnuthSolver();
-    }
-    
     initializeGame();
 });
 
-restartGameBtnDifferentettings.addEventListener('click', function() {
+restartGameBtnDifferentSettings.addEventListener('click', function() {
     location.reload();
 });

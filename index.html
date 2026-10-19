@@ -29,7 +29,7 @@
 
 					<div class="form-check mb-2">
 						<input type="checkbox" id="allow-duplicates" class="form-check-input">
-						<label class="form-check-label" for="allow-duplicates">Allow Duplicates</label>
+						<label class="form-check-label" for="allow-duplicates">Allow Duplicates in Secret Code</label>
 					</div>
 
 					<label for="max-guesses">Maximum Guesses (2-10):</label>
@@ -98,7 +98,7 @@
 							aria-hidden="true">&times;</span></button>
 				</div>
 				<div class="modal-body">
-					Knuth's algorithm sequentially eliminates inconsistent possibilities by simulating every potential guess and comparing the predicted feedback to the actual feedback, then chooses the guess that minimizes the maximum number of remaining candidates. This minimax strategy guarantees that the secret code is found within five moves at most.
+					The minimax solver eliminates codes inconsistent with the feedback, then chooses a guess that minimizes the largest possible group of remaining codes. The number of moves depends on your settings.
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
